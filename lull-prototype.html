@@ -870,6 +870,36 @@ const WREN_FALLBACK = { text: "I don't have that in your sources — it isn't in
    ═══════════════════════════════════════════════════════════════ */
 const LADDER = [1, 2, 4, 8, 16, 32]; // days between returns
 
+/* ── Difficulty changes kind, not just spacing ──────────────────
+   A rung further up the ladder should not be the same question asked
+   later. It should be a different *kind* of question about the same
+   material — otherwise a card you can recite still reads as mastered
+   when you have never once had to apply it.
+
+   One register per rung, so the level is derived from the scheduler
+   rather than stored beside it. The scheduler already knows how well
+   an item is held; a second field tracking the same thing would be
+   free to disagree with it.
+
+   Six rungs, not eight: the ladder tops out at 32 days because the
+   audience is on a 6-week course. The last rung therefore carries
+   both synthesis and teaching, which are the two registers that
+   actually prove mastery. */
+const REGISTER = [
+  "first principles, plain language, no jargon",
+  "the mechanism, and the vocabulary that names it",
+  "the working method — applying it deliberately, step by step",
+  "failure modes — how this goes wrong and how you catch it",
+  "structure — how the parts constrain each other",
+  "synthesis and transfer — explaining it to someone who does not know it"
+];
+
+// ponytail: pure function, no storage — the whole scheduler is testable in one line.
+function registerForStep(step) {
+  const i = Math.max(0, Math.min(Number(step) || 0, REGISTER.length - 1));
+  return REGISTER[i];
+}
+
 // ponytail: pure function, no storage — the whole scheduler is testable in one line.
 function nextStep(step, correct, sleptWell) {
   if (!correct) return 0;                              // missed → back tomorrow
@@ -1323,6 +1353,14 @@ function selfCheck() {
   // return labels
   ok(returnLabel(0) === "Back tomorrow morning", "step 0 reads as tomorrow");
   ok(returnLabel(5).includes("32 days"), "far steps read in days");
+
+  // difficulty register — one per rung, and each rung a different kind of ask
+  ok(REGISTER.length === LADDER.length, "one register per ladder rung");
+  ok(new Set(REGISTER).size === REGISTER.length, "no rung repeats another's register");
+  ok(registerForStep(0).includes("first principles"), "the first rung starts from scratch");
+  ok(registerForStep(5).includes("explaining it"), "the last rung is teaching it back");
+  ok(registerForStep(99) === registerForStep(5), "out-of-range step clamps to the top rung");
+  ok(registerForStep(-1) === registerForStep(0), "negative step clamps to the first rung");
 
   // content integrity — every question must have a reachable answer + both explanations
   CONTENT.questions.forEach((q, i) => {
