@@ -54,6 +54,82 @@ Fonts: **Fraunces** (display — headlines and Wren's voice, used sparingly), **
 
 Feedback uses a good green and a soft coral — never alarm red. All theming flows through `data-theme` + CSS custom properties.
 
+## Difficulty changes kind, not just spacing
+
+A rung further up the ladder is not the same question asked later. Each of the six
+rungs asks a different *kind* of question about the same material:
+
+| Rung | Interval | The ask |
+|---|---|---|
+| 0 | 1 day | first principles, plain language, no jargon |
+| 1 | 2 days | the mechanism, and the vocabulary that names it |
+| 2 | 4 days | the working method — applying it deliberately |
+| 3 | 8 days | failure modes — how this goes wrong and how you catch it |
+| 4 | 16 days | structure — how the parts constrain each other |
+| 5 | 32 days | synthesis and transfer — explaining it to someone who does not know it |
+
+Without this, an item you can recite reads as mastered when you have never once had to
+apply it. The register is derived from the scheduler's step rather than stored beside it
+— the scheduler already knows how well an item is held, and a second field tracking the
+same thing would be free to disagree with it.
+
+Six rungs rather than eight because the ladder tops out at 32 days for a 6-week course.
+The last rung therefore carries both synthesis and teaching, which are the two registers
+that actually prove mastery.
+
+## Courses — name anything, learn it to mastery
+
+Alongside the daily loop over the learner's own materials, Lull composes a course from a
+named subject: a skill, book, essay, speech, film, documentary or textbook. Eight
+competency tiers from first principles to teaching it back, a lesson and quiz per tier,
+and a level that moves on XP earned by answering rather than by hours logged.
+
+**Two ladders, deliberately.** The spacing ladder above is *when* an item returns. The
+competency ladder is *how hard* it is asked. They are different axes — an item can be due
+tomorrow and still be asked at mastery level, and one held for a month can still need
+first principles if it was memorised rather than understood.
+
+Eight rungs here against spacing's six, because competency runs past the length of one
+6-week course. You can keep getting better at renal physiology after the exam.
+
+| Level | Tier | The ask |
+|---|---|---|
+| 1 | Novice | plain first principles, zero jargon |
+| 2 | Apprentice | core vocabulary and the mechanism behind it |
+| 3 | Practitioner | the working method — applying it deliberately |
+| 4 | Journeyman | failure modes and how to avoid them |
+| 5 | Adept | structure — how the parts constrain each other |
+| 6 | Specialist | nuance, tension, contested readings |
+| 7 | Authority | synthesis and transfer to new situations |
+| 8 | Master | original judgment, and teaching it to others |
+
+A wrong answer still earns XP. The attempt is the learning, and zero for a miss turns
+retrieval back into a score — the one thing this app will not put in front of someone at
+6am.
+
+**`grounded` is not optional.** A course built from the learner's own uploads and one
+built from the model's general knowledge are different things, and the learner is entitled
+to know which they are reading. Every composed course carries the flag and every surface
+that shows a course shows it. Guardrail 3 still holds inside a course: where the tutor
+answers from the learner's materials it says so, and where it has nothing it says that
+instead of inventing.
+
+`composeCourse()` is stubbed in the prototype exactly as `CONTENT` and `WREN_REPLIES` are
+— no build, no server, no network — and the real implementation replaces that one
+function.
+
+## The explanation contract
+
+Every question carries two pieces of copy, and the tutor must produce both:
+
+- **`why`** — why the correct answer is correct.
+- **`miss`** — why the *tempting* wrong answer fails.
+
+The second is the one that does the work. A learner who picks a plausible distractor has
+a specific wrong model, and naming only the right answer leaves that model intact. The
+self-check enforces that both exist on every authored question; the LLM tutor is held to
+the same contract when it generates them.
+
 ## UX principles (non-negotiable)
 
 - One primary action per screen. Single hero button in the bottom thumb zone. Settings in the top corner, out of the easy path.
@@ -75,12 +151,13 @@ Voice: warm, lower-pitched, gender-ambiguous by default, user-selectable across 
 
 ## Roadmap
 
-1. **Tutor** — LLM API for teach/quiz/sidebar, source-grounded on uploaded materials (RAG). Socratic "guide, don't dump" by default.
-2. **Curriculum engine** — any book or subject → a spaced schedule over N days; generates the evening slice and the morning questions.
-3. **Spaced repetition** — scheduler keyed to morning performance and sleep. Misses resurface.
-4. **Personalization** — import NotebookLM / LLM history / connected apps to calibrate level and tone.
-5. **Sleep integration** — HealthKit and wearables for sleep signal. Honest overnight audio reinforcement (TMR-style cueing of that night's material only). Protect-sleep guardrails.
-6. **Accounts + storage**, then privacy as a marketed feature. Data-hungry, student, health-adjacent — trust is the moat.
+1. **Tutor** — LLM API for teach/quiz/sidebar, source-grounded on uploaded materials (RAG). Socratic "guide, don't dump" by default. Generated questions honour the explanation contract above and the register for the item's current rung.
+2. **Voice, both directions** — Wren narrates the evening slice (TTS) and takes spoken answers in the morning (STT), as two thin server functions: `narrate(text) -> audio` and `listen(audio, mime) -> text`. Voice is what makes the pre-sleep slice usable with the lights already off, which is exactly when it should be used.
+3. **Curriculum engine** — any book or subject → a spaced schedule over N days; generates the evening slice and the morning questions.
+4. **Spaced repetition** — scheduler keyed to morning performance and sleep. Misses resurface.
+5. **Personalization** — import NotebookLM / LLM history / connected apps to calibrate level and tone.
+6. **Sleep integration** — HealthKit and wearables for sleep signal. Honest overnight audio reinforcement (TMR-style cueing of that night's material only). Protect-sleep guardrails.
+7. **Accounts + storage**, then privacy as a marketed feature. Data-hungry, student, health-adjacent — trust is the moat.
 
 ## Guardrails
 

@@ -870,6 +870,36 @@ const WREN_FALLBACK = { text: "I don't have that in your sources — it isn't in
    ═══════════════════════════════════════════════════════════════ */
 const LADDER = [1, 2, 4, 8, 16, 32]; // days between returns
 
+/* ── Difficulty changes kind, not just spacing ──────────────────
+   A rung further up the ladder should not be the same question asked
+   later. It should be a different *kind* of question about the same
+   material — otherwise a card you can recite still reads as mastered
+   when you have never once had to apply it.
+
+   One register per rung, so the level is derived from the scheduler
+   rather than stored beside it. The scheduler already knows how well
+   an item is held; a second field tracking the same thing would be
+   free to disagree with it.
+
+   Six rungs, not eight: the ladder tops out at 32 days because the
+   audience is on a 6-week course. The last rung therefore carries
+   both synthesis and teaching, which are the two registers that
+   actually prove mastery. */
+const REGISTER = [
+  "first principles, plain language, no jargon",
+  "the mechanism, and the vocabulary that names it",
+  "the working method — applying it deliberately, step by step",
+  "failure modes — how this goes wrong and how you catch it",
+  "structure — how the parts constrain each other",
+  "synthesis and transfer — explaining it to someone who does not know it"
+];
+
+// ponytail: pure function, no storage — the whole scheduler is testable in one line.
+function registerForStep(step) {
+  const i = Math.max(0, Math.min(Number(step) || 0, REGISTER.length - 1));
+  return REGISTER[i];
+}
+
 // ponytail: pure function, no storage — the whole scheduler is testable in one line.
 function nextStep(step, correct, sleptWell) {
   if (!correct) return 0;                              // missed → back tomorrow
@@ -886,6 +916,85 @@ function returnLabel(step) {
     return "Back " + DAYS[t.getDay()] + " morning";
   }
   return "Back in " + d + " days";
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COURSES — name anything, learn it to mastery.
+
+   Two ladders, deliberately. LADDER above is *when* an item comes
+   back; this one is *how hard* it is asked. They are different
+   axes: an item can be due tomorrow and still be asked at mastery
+   level, and one held for a month can still need first principles
+   if it was never understood, only memorised.
+
+   Eight rungs here against the spacing ladder's six, because
+   competency runs past the length of one 6-week course — you can
+   keep getting better at renal physiology after the exam.
+   ═══════════════════════════════════════════════════════════════ */
+const MAX_LEVEL = 8;
+
+const COURSE_TIERS = [
+  { tier: "Novice",       focus: "plain first principles, zero jargon, concrete everyday examples" },
+  { tier: "Apprentice",   focus: "core vocabulary and the basic mechanism behind it" },
+  { tier: "Practitioner", focus: "the working method — applying it deliberately" },
+  { tier: "Journeyman",   focus: "failure modes and how a competent practitioner avoids them" },
+  { tier: "Adept",        focus: "structure — how the parts constrain each other" },
+  { tier: "Specialist",   focus: "nuance, tension, and contested readings of the material" },
+  { tier: "Authority",    focus: "synthesis across the whole material, transfer to new situations" },
+  { tier: "Master",       focus: "generating original judgment and teaching it to others" }
+];
+
+// ponytail: pure functions, no storage — the whole progression is testable.
+function levelGoal(level) { return 300 + (level - 1) * 250; }
+
+// A miss still earns something. The attempt is the learning, and zero for a
+// wrong answer turns retrieval back into a score — the one thing this app
+// refuses to put in front of someone at 6am.
+function xpForAnswer(level, correct) {
+  return correct ? 35 + level * 6 : 8 + Math.round(level * 1.5);
+}
+
+function applyXp(level, xp, gained) {
+  let nextLevel = level, nextXp = xp + gained, leveled = false;
+  while (nextLevel < MAX_LEVEL && nextXp >= levelGoal(nextLevel)) {
+    nextXp -= levelGoal(nextLevel);
+    nextLevel += 1;
+    leveled = true;
+  }
+  if (nextLevel === MAX_LEVEL) nextXp = Math.min(nextXp, levelGoal(MAX_LEVEL));
+  return { level: nextLevel, xp: nextXp, leveled };
+}
+
+function tierAt(level) {
+  return COURSE_TIERS[Math.max(0, Math.min(level - 1, COURSE_TIERS.length - 1))];
+}
+
+/* ── The generation seam ────────────────────────────────────────
+   Stubbed here exactly as CONTENT and WREN_REPLIES are: this file
+   has no build, no server and no network, so it composes a course
+   shape locally and the real implementation replaces this one
+   function.
+
+   Real shape, when the tutor lands:
+     composeCourse(subject) -> { title, kind, attribution, premise,
+                                 tiers: [{tier, focus}] x8, grounded }
+
+   `grounded` is the honest bit and must survive into the real
+   version. A course built from the learner's own uploads and one
+   built from the model's general knowledge are different things,
+   and the learner is entitled to know which they are reading —
+   this app does not get to blur that. */
+function composeCourse(subject) {
+  const name = String(subject || "").trim();
+  return {
+    title: name,
+    kind: "Subject",
+    attribution: "",
+    premise: "What mastery of " + name + " means, in two sentences, once the tutor is wired up.",
+    tiers: COURSE_TIERS.map(t => ({ tier: t.tier, focus: t.focus })),
+    // No uploads in the prototype, so nothing here is source-grounded yet.
+    grounded: false
+  };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -912,6 +1021,10 @@ const S = {
   quizDone: false,
   // history (stubbed) — night dots: on = consistent, short = under 6h
   nights: ["on", "on", "short", "on", "on", "on", "on"],
+  // courses — name anything, learn it to mastery
+  course: null,          // { title, kind, premise, tiers, grounded }
+  courseLevel: 1,
+  courseXp: 0,
 };
 
 const el = (id) => document.getElementById(id);
@@ -1324,11 +1437,35 @@ function selfCheck() {
   ok(returnLabel(0) === "Back tomorrow morning", "step 0 reads as tomorrow");
   ok(returnLabel(5).includes("32 days"), "far steps read in days");
 
+  // difficulty register — one per rung, and each rung a different kind of ask
+  ok(REGISTER.length === LADDER.length, "one register per ladder rung");
+  ok(new Set(REGISTER).size === REGISTER.length, "no rung repeats another's register");
+  ok(registerForStep(0).includes("first principles"), "the first rung starts from scratch");
+  ok(registerForStep(5).includes("explaining it"), "the last rung is teaching it back");
+  ok(registerForStep(99) === registerForStep(5), "out-of-range step clamps to the top rung");
+  ok(registerForStep(-1) === registerForStep(0), "negative step clamps to the first rung");
+
   // content integrity — every question must have a reachable answer + both explanations
   CONTENT.questions.forEach((q, i) => {
     ok(q.answer >= 0 && q.answer < q.choices.length, `q${i} answer index in range`);
     ok(q.why && q.miss, `q${i} has both why and miss copy`);
   });
+
+  // course progression
+  ok(levelGoal(1) === 300 && levelGoal(8) === 2050, "level goals rise with level");
+  ok(xpForAnswer(1, false) > 0, "a wrong answer still earns something");
+  ok(xpForAnswer(3, true) > xpForAnswer(3, false), "correct beats incorrect at the same level");
+  ok(applyXp(1, 0, 300).level === 2, "hitting the goal levels up");
+  ok(applyXp(1, 0, 299).level === 1, "one short of the goal does not");
+  ok(applyXp(1, 0, 100000).level === MAX_LEVEL, "levels clamp at mastery");
+  ok(applyXp(MAX_LEVEL, 0, 100000).xp <= levelGoal(MAX_LEVEL), "xp clamps at the top too");
+  ok(applyXp(1, 0, 300).leveled === true, "a level-up reports itself");
+  ok(COURSE_TIERS.length === MAX_LEVEL, "one tier per level");
+  ok(new Set(COURSE_TIERS.map(t => t.focus)).size === MAX_LEVEL, "no tier repeats another's focus");
+  ok(tierAt(0).tier === COURSE_TIERS[0].tier, "level below range clamps to the first tier");
+  ok(tierAt(99).tier === COURSE_TIERS[MAX_LEVEL - 1].tier, "level above range clamps to mastery");
+  ok(composeCourse("Renal Physiology").tiers.length === MAX_LEVEL, "a composed course has a full ladder");
+  ok(composeCourse("x").grounded === false, "an ungrounded course says so");
 
   // guardrail: no screen may claim sleep-learning
   const banned = /learn while you sleep|learn in your sleep|sleep.learning/i;
