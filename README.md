@@ -77,6 +77,47 @@ Six rungs rather than eight because the ladder tops out at 32 days for a 6-week 
 The last rung therefore carries both synthesis and teaching, which are the two registers
 that actually prove mastery.
 
+## Courses — name anything, learn it to mastery
+
+Alongside the daily loop over the learner's own materials, Lull composes a course from a
+named subject: a skill, book, essay, speech, film, documentary or textbook. Eight
+competency tiers from first principles to teaching it back, a lesson and quiz per tier,
+and a level that moves on XP earned by answering rather than by hours logged.
+
+**Two ladders, deliberately.** The spacing ladder above is *when* an item returns. The
+competency ladder is *how hard* it is asked. They are different axes — an item can be due
+tomorrow and still be asked at mastery level, and one held for a month can still need
+first principles if it was memorised rather than understood.
+
+Eight rungs here against spacing's six, because competency runs past the length of one
+6-week course. You can keep getting better at renal physiology after the exam.
+
+| Level | Tier | The ask |
+|---|---|---|
+| 1 | Novice | plain first principles, zero jargon |
+| 2 | Apprentice | core vocabulary and the mechanism behind it |
+| 3 | Practitioner | the working method — applying it deliberately |
+| 4 | Journeyman | failure modes and how to avoid them |
+| 5 | Adept | structure — how the parts constrain each other |
+| 6 | Specialist | nuance, tension, contested readings |
+| 7 | Authority | synthesis and transfer to new situations |
+| 8 | Master | original judgment, and teaching it to others |
+
+A wrong answer still earns XP. The attempt is the learning, and zero for a miss turns
+retrieval back into a score — the one thing this app will not put in front of someone at
+6am.
+
+**`grounded` is not optional.** A course built from the learner's own uploads and one
+built from the model's general knowledge are different things, and the learner is entitled
+to know which they are reading. Every composed course carries the flag and every surface
+that shows a course shows it. Guardrail 3 still holds inside a course: where the tutor
+answers from the learner's materials it says so, and where it has nothing it says that
+instead of inventing.
+
+`composeCourse()` is stubbed in the prototype exactly as `CONTENT` and `WREN_REPLIES` are
+— no build, no server, no network — and the real implementation replaces that one
+function.
+
 ## The explanation contract
 
 Every question carries two pieces of copy, and the tutor must produce both:
